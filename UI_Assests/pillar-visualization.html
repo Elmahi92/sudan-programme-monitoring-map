@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UNDP Pillar Beneficiary Visualization</title>
+    <style>
+      :root {
+        --undp-blue: #0b6eb8;
+        --undp-blue-dark: #00558d;
+        --undp-sky: #b8dced;
+        --undp-slate: #dfe3e8;
+        --undp-soft: #f3f6f8;
+        --undp-text: #1e2d3d;
+        --undp-subtext: #596d7f;
+        --undp-row: #f7f8fa;
+        --undp-row-alt: #eef2f6;
+        --undp-white: #ffffff;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background: #f2f5f7;
+        color: var(--undp-text);
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+
+      .page {
+        max-width: 1280px;
+        margin: 24px auto 40px;
+        padding: 0 18px;
+      }
+
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .brand-mark {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 46px;
+        height: 46px;
+        background: var(--undp-blue);
+        color: var(--undp-white);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 2.8vw, 38px);
+        color: var(--undp-blue-dark);
+        line-height: 1.1;
+      }
+
+      .subtitle {
+        color: var(--undp-subtext);
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .kpis {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(140px, 1fr));
+        gap: 14px;
+        margin-bottom: 18px;
+      }
+
+      .kpi-card {
+        background: var(--undp-white);
+        border: 1px solid var(--undp-slate);
+        border-radius: 10px;
+        padding: 16px 18px;
+        box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+      }
+
+      .kpi-label {
+        color: var(--undp-subtext);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 10px;
+      }
+
+      .kpi-value {
+        font-size: clamp(22px, 2vw, 30px);
+        font-weight: 700;
+        color: var(--undp-blue-dark);
+      }
+
+      .card {
+        background: var(--undp-white);
+        border: 1px solid var(--undp-slate);
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(15, 38, 65, 0.04);
+      }
+
+      .chart-panel {
+        padding: 18px 18px 12px;
+      }
+
+      .chart-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .chart-header h2 {
+        margin: 0;
+        font-size: 18px;
+        color: var(--undp-blue-dark);
+      }
+
+      .legend {
+        display: flex;
+        gap: 18px;
+        font-size: 12px;
+        color: var(--undp-subtext);
+        font-weight: 600;
+      }
+
+      .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      .chart-wrap {
+        position: relative;
+        min-height: 260px;
+      }
+
+      .bars {
+        display: grid;
+        gap: 14px;
+      }
+
+      .bar-row {
+        display: grid;
+        grid-template-columns: minmax(180px, 1.7fr) minmax(180px, 1.2fr) minmax(180px, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        min-height: 52px;
+      }
+
+      .row-label {
+        font-weight: 700;
+        color: var(--undp-text);
+        font-size: 15px;
+      }
+
+      .metric-block {
+        display: grid;
+        gap: 6px;
+      }
+
+      .metric-value {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--undp-blue-dark);
+      }
+
+      .bar-track {
+        position: relative;
+        width: 100%;
+        height: 18px;
+        background: var(--undp-soft);
+        border: 1px solid rgba(11,110,184,0.12);
+        border-radius: 4px;
+        overflow: hidden;
+      }
+
+      .bar-fill {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        border-radius: 4px;
+        background: linear-gradient(90deg, var(--undp-blue) 0%, #43a8d9 100%);
+      }
+
+      .bar-fill.alt {
+        background: linear-gradient(90deg, #8dbbda 0%, #c6deeb 100%);
+      }
+
+      .percent-pill {
+        min-width: 56px;
+        text-align: right;
+        font-weight: 700;
+        color: var(--undp-blue-dark);
+      }
+
+      .table-panel {
+        margin-top: 18px;
+        overflow: hidden;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 15px;
+      }
+
+      thead th {
+        background: var(--undp-blue);
+        color: var(--undp-white);
+        font-weight: 700;
+        padding: 15px 14px;
+        text-align: left;
+      }
+
+      thead th:nth-child(2),
+      thead th:nth-child(3),
+      thead th:nth-child(4) {
+        text-align: right;
+      }
+
+      tbody td {
+        padding: 15px 14px;
+        border-bottom: 1px solid #edf2f6;
+      }
+
+      tbody tr:nth-child(odd) {
+        background: var(--undp-white);
+      }
+
+      tbody tr:nth-child(even) {
+        background: var(--undp-row-alt);
+      }
+
+      tbody td:nth-child(2),
+      tbody td:nth-child(3),
+      tbody td:nth-child(4) {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .pillars {
+        font-weight: 700;
+        color: var(--undp-text);
+      }
+
+      @media (max-width: 900px) {
+        .kpis {
+          grid-template-columns: 1fr;
+        }
+
+        .bar-row {
+          grid-template-columns: 1fr;
+          gap: 8px;
+          padding: 12px 0;
+        }
+
+        .percent-pill {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="header">
+        <div class="brand">
+          <div class="brand-mark">UNDP</div>
+          <div>
+            <div class="subtitle">Sudan portfolio</div>
+            <h1>Beneficiary reach by pillar</h1>
+          </div>
+        </div>
+      </div>
+
+      <div class="kpis">
+        <div class="kpi-card">
+          <div class="kpi-label">Target</div>
+          <div class="kpi-value" id="kpiTarget">7,946,260</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Reached</div>
+          <div class="kpi-value" id="kpiReached">7,202,823</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Achieved</div>
+          <div class="kpi-value" id="kpiAchieved">90%</div>
+        </div>
+      </div>
+
+      <div class="card chart-panel">
+        <div class="chart-header">
+          <h2>Progress overview</h2>
+          <div class="legend">
+            <span class="legend-item"><span class="legend-dot" style="background:#0b6eb8"></span> Target</span>
+            <span class="legend-item"><span class="legend-dot" style="background:#9fcfe6"></span> Reached</span>
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <div id="barChart" class="bars"></div>
+        </div>
+      </div>
+
+      <div class="card table-panel">
+        <table>
+          <thead>
+            <tr>
+              <th>Pillar</th>
+              <th>Beneficiaries Target</th>
+              <th>Reached direct + indirect (% of women)</th>
+              <th>% Achieved</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      const data = [
+        { pillar: 'Health', target: 6153426, reached: 5909874, womenPercent: 61, achieved: 90 },
+        { pillar: 'Livelihoods and Economic Recovery', target: 1610404, reached: 1561005, womenPercent: 36, achieved: 97 },
+        { pillar: 'Peacebuilding and Social Cohesion', target: 19079, reached: 1543, womenPercent: 44, achieved: 84 },
+        { pillar: 'Climate Resilience and Environment', target: 163351, reached: 116001, womenPercent: 49, achieved: 71 },
+        { pillar: 'Total', target: 7946260, reached: 7202823, womenPercent: 48, achieved: 90 }
+      ];
+
+      const formatNumber = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+      const barChart = document.getElementById('barChart');
+      const tableBody = document.getElementById('tableBody');
+
+      const maxValue = Math.max(...data.map(item => item.target), ...data.map(item => item.reached));
+
+      barChart.innerHTML = data.map(row => {
+        const targetWidth = (row.target / maxValue) * 100;
+        const reachedWidth = (row.reached / maxValue) * 100;
+
+        return `
+          <div class="bar-row">
+            <div class="row-label">${row.pillar}</div>
+            <div class="metric-block">
+              <div class="metric-value">${formatNumber.format(row.target)}</div>
+              <div class="bar-track">
+                <div class="bar-fill" style="width:${targetWidth}%"></div>
+              </div>
+            </div>
+            <div class="metric-block">
+              <div class="metric-value">${formatNumber.format(row.reached)}</div>
+              <div class="bar-track">
+                <div class="bar-fill alt" style="width:${reachedWidth}%"></div>
+              </div>
+            </div>
+            <div class="percent-pill">${row.achieved}%</div>
+          </div>
+        `;
+      }).join('');
+
+      tableBody.innerHTML = data.map(row => `
+        <tr>
+          <td class="pillars">${row.pillar}</td>
+          <td>${formatNumber.format(row.target)}</td>
+          <td>${formatNumber.format(row.reached)} (${row.womenPercent}%)</td>
+          <td>${row.achieved}%</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('kpiTarget').textContent = formatNumber.format(data[data.length - 1].target);
+      document.getElementById('kpiReached').textContent = formatNumber.format(data[data.length - 1].reached);
+      document.getElementById('kpiAchieved').textContent = `${data[data.length - 1].achieved}%`;
+    </script>
+  </body>
+</html>

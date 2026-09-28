@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Color Palette Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F7F7F7;
+    --surface: #FFFFFF;
+    --surface2: #FAFAFA;
+    --border: #EDEFF0;
+    --text-primary: #232E3D;
+    --text-secondary: #55606E;
+    --text-muted: #A9B1B7;
+    --accent: #006EB5;
+    --accent-light: #B5D5F5;
+    --radius: 10px;
+    --shadow: 0 1px 4px rgba(35,46,61,0.08);
+  }
+
+  [data-theme="dark"] {
+    --bg: #232E3D;
+    --surface: #394250;
+    --surface2: #47505C;
+    --border: #57606D;
+    --text-primary: #EAEBEC;
+    --text-secondary: #D4D6D8;
+    --text-muted: #AAB1B6;
+    --accent: #5DD4F0;
+    --accent-light: #47505C;
+    --radius: 10px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    min-height: 100vh;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--shadow);
+  }
+  header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+    color: var(--text-primary);
+  }
+  header h1 span { color: var(--accent); }
+
+  .header-right { display: flex; align-items: center; gap: 12px; }
+
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 5px 12px;
+    transition: all 0.2s;
+    user-select: none;
+  }
+  .theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .toggle-dot {
+    width: 28px; height: 16px;
+    background: var(--border);
+    border-radius: 8px;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .toggle-dot::after {
+    content: '';
+    position: absolute;
+    left: 2px; top: 2px;
+    width: 12px; height: 12px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  [data-theme="dark"] .toggle-dot { background: var(--accent); }
+  [data-theme="dark"] .toggle-dot::after { transform: translateX(12px); }
+
+  .copy-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--text-primary);
+    color: var(--bg);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.2s;
+    pointer-events: none;
+    z-index: 999;
+  }
+  .copy-toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ── LAYOUT ── */
+  main { max-width: 1280px; margin: 0 auto; padding: 32px 24px 64px; }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    margin-top: 36px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+    width: fit-content;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+  }
+  .tab {
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text-primary); }
+  .tab.active {
+    background: var(--surface);
+    color: var(--accent);
+    box-shadow: var(--shadow);
+    font-weight: 600;
+  }
+
+  /* ── COLOR SWATCH ── */
+  .swatch-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+  .swatch-box {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: var(--shadow);
+    transition: transform 0.15s, box-shadow 0.15s;
+    position: relative;
+  }
+  .swatch:hover .swatch-box {
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .swatch-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-align: center;
+    line-height: 1.3;
+    max-width: 56px;
+  }
+  .swatch-name {
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-align: center;
+    max-width: 56px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Row variant (for named groups) */
+  .swatch-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .swatch-row-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    min-width: 120px;
+  }
+
+  /* Tall swatches for sequences */
+  .swatch-sequence {
+    display: flex;
+    gap: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 40px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .swatch-sequence:hover { transform: scaleY(1.06); }
+  .seq-cell { flex: 1; }
+
+  .seq-group { margin-bottom: 8px; }
+  .seq-group-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* Bivariate grid */
+  .bivariate-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  .bivariate-row { display: flex; }
+  .bivariate-cell {
+    width: 36px;
+    height: 36px;
+    transition: transform 0.15s;
+  }
+
+  /* SDG colors */
+  .sdg-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .sdg-swatch {
+    width: 56px;
+    height: 56px;
+    border-radius: 8px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 6px;
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.9);
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: transform 0.15s;
+  }
+  .sdg-swatch:hover { transform: scale(1.1); }
+
+  /* Panel */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+  }
+  .panel-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel-title .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* Graph tokens */
+  .graph-token-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .graph-token {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .graph-token:hover { border-color: var(--accent); }
+  .graph-token-box {
+    width: 28px; height: 28px;
+    border-radius: 5px;
+    flex-shrink: 0;
+    border: 1px solid rgba(0,0,0,0.07);
+  }
+  .graph-token-info { min-width: 0; }
+  .graph-token-name { font-size: 10px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .graph-token-hex { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-muted); }
+
+  /* Gender / Location chips */
+  .chip-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .chip-text { font-size: 11px; font-weight: 600; color: var(--text-primary); }
+  .chip-hex { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Color Palette <span>Dashboard</span></h1>
+  <div class="header-right">
+    <label class="theme-toggle" id="themeToggle">
+      <span id="themeLabel">Light</span>
+      <div class="toggle-dot"></div>
+    </label>
+  </div>
+</header>
+
+<div class="copy-toast" id="toast">Copied!</div>
+
+<main>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" data-page="graph">Graph Tokens</div>
+    <div class="tab" data-page="grays">Grays</div>
+    <div class="tab" data-page="primary">Primary Blues</div>
+    <div class="tab" data-page="alerts">Alerts</div>
+    <div class="tab" data-page="categorical">Categorical</div>
+    <div class="tab" data-page="sequential">Sequential</div>
+    <div class="tab" data-page="divergent">Divergent</div>
+    <div class="tab" data-page="bivariate">Bivariate</div>
+    <div class="tab" data-page="sdg">SDG</div>
+  </div>
+
+  <!-- PAGE: GRAPH TOKENS -->
+  <div class="page active" id="page-graph">
+    <div class="section-title">Graph Design Tokens</div>
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>Core tokens used for all graph rendering</div>
+      <div class="graph-token-grid" id="graphTokens"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: GRAYS -->
+  <div class="page" id="page-grays">
+    <div class="section-title">Gray Scale</div>
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>Neutral gray ramp</div>
+      <div class="swatch-grid" id="graysGrid"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: PRIMARY BLUES -->
+  <div class="page" id="page-primary">
+    <div class="section-title">Primary Blue Scale</div>
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>Blue-100 → Blue-700</div>
+      <div class="swatch-grid" id="primaryGrid"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: ALERTS -->
+  <div class="page" id="page-alerts">
+    <div class="section-title">Alert Colors</div>
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>Status & alert palette</div>
+      <div class="swatch-grid" id="alertsGrid"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: CATEGORICAL -->
+  <div class="page" id="page-categorical">
+    <div class="section-title">Categorical Colors</div>
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>10-color categorical scale</div>
+      <div class="swatch-grid" id="categoricalGrid"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>Gender & Location</div>
+      <div class="chip-row" id="specialChips"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: SEQUENTIAL -->
+  <div class="page" id="page-sequential">
+    <div class="section-title">Sequential — Negative (Red/Orange)</div>
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>4 to 10 stops</div>
+      <div id="negSeq"></div>
+    </div>
+    <div class="section-title">Sequential — Positive (Green)</div>
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>4 to 10 stops</div>
+      <div id="posSeq"></div>
+    </div>
+    <div class="section-title">Sequential — Neutral (Blue/Teal)</div>
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>4 to 10 stops</div>
+      <div id="neuSeq"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: DIVERGENT -->
+  <div class="page" id="page-divergent">
+    <div class="section-title">Divergent Colors</div>
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>4 to 11 stops — Red ↔ Blue</div>
+      <div id="divGrid"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: BIVARIATE -->
+  <div class="page" id="page-bivariate">
+    <div class="section-title">Bivariate Colors</div>
+    <div id="bivGrid"></div>
+  </div>
+
+  <!-- PAGE: SDG -->
+  <div class="page" id="page-sdg">
+    <div class="section-title">SDG Colors</div>
+    <div class="panel">
+      <div class="panel-title"><span class="dot"></span>UN Sustainable Development Goals 1–17</div>
+      <div class="sdg-grid" id="sdgGrid"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ─────────────────────────────────────────────
+//  PALETTE DATA
+// ─────────────────────────────────────────────
+const palette = {
+  light: {
+    graphTokens: {
+      'graphBackgroundColor': '#F7F7F7',
+      'graphMainColor': '#006EB5',
+      'graphGray': '#D4D6D8',
+      'graphNoData': '#FFFFFF',
+    },
+    grays: {
+      'white': '#FFFFFF',
+      'gray-100': '#FAFAFA',
+      'gray-200': '#F7F7F7',
+      'gray-300': '#EDEFF0',
+      'gray-400': '#D4D6D8',
+      'gray-500': '#A9B1B7',
+      'gray-600': '#55606E',
+      'gray-700': '#232E3D',
+      'black': '#000000',
+    },
+    primaryColors: {
+      'blue-100': '#B5D5F5',
+      'blue-200': '#94C4F5',
+      'blue-300': '#6BABEB',
+      'blue-400': '#4F95DD',
+      'blue-500': '#3288CE',
+      'blue-600': '#006EB5',
+      'blue-700': '#1F5A95',
+    },
+    alerts: {
+      'lightYellow': '#FFE17E',
+      'yellow': '#FFEB00',
+      'darkYellow': '#FBC412',
+      'lightRed': '#FFBCB7',
+      'red': '#EE402D',
+      'darkRed': '#D12800',
+      'lightGreen': '#B8ECB6',
+      'green': '#6DE354',
+      'darkGreen': '#59BA47',
+      'lightAzure': '#A2DAF3',
+      'azure': '#60D4F2',
+      'darkAzure': '#00C1FF',
+    },
+    categoricalColors: {
+      'Color 1': '#006eb5',
+      'Color 2': '#5DD4F0',
+      'Color 3': '#02A38A',
+      'Color 4': '#E78625',
+      'Color 5': '#E0529E',
+      'Color 6': '#757AF0',
+      'Color 7': '#A0C236',
+      'Color 8': '#FBC412',
+      'Color 9': '#BF8B2E',
+      'Color 10': '#A9B1B7',
+    },
+    genderColors: { 'male': '#02A38A', 'female': '#757AF0' },
+    locationColors: { 'urban': '#006eb5', 'rural': '#5DD4F0' },
+    sequentialColors: {
+      negativeColorsx04: ['#F6B666','#EB8033','#D64513','#A71C04'],
+      negativeColorsx05: ['#FBD68A','#F39E4B','#E16424','#C12705','#850E02'],
+      negativeColorsx06: ['#FFF4AC','#F7BD6D','#EC8234','#D54211','#A01903','#650000'],
+      negativeColorsx07: ['#FFF4AC','#F8C678','#F29641','#E16424','#C92B06','#961503','#650000'],
+      negativeColorsx08: ['#FFF4AC','#F9CD7F','#F4A451','#E97A30','#D94C17','#BB2505','#8F1202','#650000'],
+      negativeColorsx09: ['#FFF4AC','#FAD285','#F5AE5D','#EE8938','#E16424','#D2390C','#ad190d','#891002','#650000'],
+      negativeColorsx10: ['#FFF4AC','#FBD68A','#F6B666','#F29641','#E7752D','#DB521A','#C92B06','#A71C04','#850E02','#650000'],
+      positiveColorsx04: ['#BADA81','#7FC45F','#58A85A','#308C56'],
+      positiveColorsx05: ['#DDE797','#9FD071','#6CB65D','#429858','#187B54'],
+      positiveColorsx06: ['#FFF4AC','#C1DD85','#81C55F','#56A75A','#2C8956','#006A51'],
+      positiveColorsx07: ['#FFF4AC','#CBE18C','#96CD6B','#6CB65D','#489D59','#248455','#006A51'],
+      positiveColorsx08: ['#FFF4AC','#D3E491','#A6D374','#7BC05E','#5CAB5B','#3E9558','#1F8054','#006A51'],
+      positiveColorsx09: ['#FFF4AC','#D8E694','#B1D77C','#88C862','#6CB65D','#51A35A','#369057','#1B7D54','#006A51'],
+      positiveColorsx10: ['#FFF4AC','#DDE797','#BADA81','#96CD6B','#78BE5E','#60AD5B','#489D59','#308C56','#187B54','#006A51'],
+      neutralColorsx04: ['#FFF4AC','#5FCDA1','#0091A9','#005396'],
+      neutralColorsx05: ['#FFF4AC','#7BD4A3','#00A5A1','#006CB3','#003F80'],
+      neutralColorsx06: ['#FFF4AC','#98DBA5','#16BB9C','#008FA9','#0063A8','#003F80'],
+      neutralColorsx07: ['#FFF4AC','#AADFA6','#47C79F','#00A5A1','#007FAF','#005DA1','#003F80'],
+      neutralColorsx08: ['#FFF4AC','#B7E2A7','#66CFA2','#00B59B','#0095A7','#0074B3','#00589D','#003F80'],
+      neutralColorsx09: ['#FFF4AC','#C1E5A8','#7CD4A3','#29C09D','#00A5A1','#0089AB','#006CB3','#005599','#003F80'],
+      neutralColorsx10: ['#FFF4AC','#C8E7A8','#8CD8A4','#47C79F','#00B29C','#0099A5','#007FAF','#0067AD','#005396','#003F80'],
+    },
+    divergentColors: {
+      colorsx04: ['#d9382d','#eea57d','#89bfdc','#347cbc'],
+      colorsx05: ['#d9382d','#eea57d','#ffffbf','#89bfdc','#347cbc'],
+      colorsx06: ['#d9382d','#e88666','#f6d39e','#bae0e1','#70a8cc','#347cbc'],
+      colorsx07: ['#d9382d','#e88666','#f6d39e','#ffffbf','#bae0e1','#70a8cc','#347cbc'],
+      colorsx08: ['#d9382d','#e47559','#eea57d','#f6d39e','#bae0e1','#89bfdc','#5f9dcc','#347cbc'],
+      colorsx09: ['#d9382d','#e47559','#eea57d','#f6d39e','#ffffbf','#bae0e1','#89bfdc','#5f9dcc','#347cbc'],
+      colorsx10: ['#aa1d09','#d9382d','#e47559','#eea57d','#f6d39e','#bae0e1','#89bfdc','#5f9dcc','#347cbc','#095aab'],
+      colorsx11: ['#aa1d09','#d9382d','#e47559','#eea57d','#f6d39e','#ffffbf','#bae0e1','#89bfdc','#5f9dcc','#347cbc','#095aab'],
+    },
+    bivariateColors: {
+      'colors03x03': [['#e5e5e5','#7FDCF9','#0BC6FF'],['#F99FBA','#9697D3','#3690EB'],['#F4618D','#A961B3','#5C61DA']],
+      'colors04x04': [['#e5e5e5','#BAE7F6','#7FDCF9','#41D0FC'],['#F6C5D4','#BFBEDD','#88B8E5','#57B2ED'],['#F99FBA','#C89BC6','#9697D3','#6494DF'],['#F782A5','#D180B3','#9F7DC5','#727AD4']],
+      'colors05x04': [['#e5e5e5','#BAE7F6','#7FDCF9','#41D0FC'],['#F6C5D4','#BFBEDD','#88B8E5','#57B2ED'],['#F99FBA','#C89BC6','#9697D3','#6494DF'],['#F782A5','#D180B3','#9F7DC5','#727AD4'],['#F4618D','#D2619F','#A961B3','#8061C8']],
+      'colors04x05': [['#e5e5e5','#BAE7F6','#7FDCF9','#41D0FC','#0BC6FF'],['#F6C5D4','#BFBEDD','#88B8E5','#57B2ED','#21ABF5'],['#F99FBA','#C89BC6','#9697D3','#6494DF','#3690EB'],['#F782A5','#D180B3','#9F7DC5','#727AD4','#4978E3']],
+      'colors05x05': [['#e5e5e5','#BAE7F6','#7FDCF9','#41D0FC','#0BC6FF'],['#F6C5D4','#BFBEDD','#88B8E5','#57B2ED','#21ABF5'],['#F99FBA','#C89BC6','#9697D3','#6494DF','#3690EB'],['#F782A5','#D180B3','#9F7DC5','#727AD4','#4978E3'],['#F4618D','#D2619F','#A961B3','#8061C8','#5C61DA']],
+    },
+    sdgColors: {
+      'SDG 1': '#E5243B','SDG 2': '#DDA63A','SDG 3': '#4C9F38','SDG 4': '#C5192D',
+      'SDG 5': '#FF3A21','SDG 6': '#26BDE2','SDG 7': '#FCC30B','SDG 8': '#A21942',
+      'SDG 9': '#FD6925','SDG 10': '#DD1367','SDG 11': '#FD9D24','SDG 12': '#BF8B2E',
+      'SDG 13': '#3F7E44','SDG 14': '#0A97D9','SDG 15': '#56C02B','SDG 16': '#00689D','SDG 17': '#19486A',
+    },
+  },
+  dark: {
+    graphTokens: {
+      'graphBackgroundColor': '#232E3D',
+      'graphMainColor': '#006EB5',
+      'graphGray': '#D4D6D8',
+      'graphNoData': '#FFFFFF',
+    },
+    grays: {
+      'white': '#232E3D','gray-100': '#394250','gray-200': '#47505C','gray-300': '#57606D',
+      'gray-400': '#78808A','gray-500': '#AAB1B6','gray-600': '#D4D6D8','gray-700': '#EAEBEC','black': '#FFFFFF',
+    },
+    primaryColors: {
+      'blue-100': '#B5D5F5','blue-200': '#94C4F5','blue-300': '#6BABEB',
+      'blue-400': '#4F95DD','blue-500': '#3288CE','blue-600': '#006EB5','blue-700': '#1F5A95',
+    },
+    alerts: {
+      'lightYellow': '#FFE17E','yellow': '#FFEB00','darkYellow': '#FBC412',
+      'lightRed': '#FFBCB7','red': '#EE402D','darkRed': '#D12800',
+      'lightGreen': '#B8ECB6','green': '#6DE354','darkGreen': '#59BA47',
+      'lightAzure': '#A2DAF3','azure': '#60D4F2','darkAzure': '#00C1FF',
+    },
+    categoricalColors: {
+      'Color 1': '#006eb5','Color 2': '#5DD4F0','Color 3': '#02A38A','Color 4': '#E78625',
+      'Color 5': '#E0529E','Color 6': '#757AF0','Color 7': '#A0C236','Color 8': '#FBC412',
+      'Color 9': '#BF8B2E','Color 10': '#A9B1B7',
+    },
+    genderColors: { 'male': '#02A38A', 'female': '#757AF0' },
+    locationColors: { 'urban': '#006eb5', 'rural': '#5DD4F0' },
+    sequentialColors: {
+      negativeColorsx04: ['#A71C04','#D64513','#EB8033','#F6B666'],
+      negativeColorsx05: ['#850E02','#C12705','#E16424','#F39E4B','#FBD68A'],
+      negativeColorsx06: ['#650000','#A01903','#D54211','#EC8234','#F7BD6D','#FFF4AC'],
+      negativeColorsx07: ['#650000','#961503','#C92B06','#E16424','#F29641','#F8C678','#FFF4AC'],
+      negativeColorsx08: ['#650000','#8F1202','#BB2505','#D94C17','#E97A30','#F4A451','#F9CD7F','#FFF4AC'],
+      negativeColorsx09: ['#650000','#891002','#ad190d','#D2390C','#E16424','#EE8938','#F5AE5D','#FAD285','#FFF4AC'],
+      negativeColorsx10: ['#650000','#850E02','#A71C04','#C92B06','#DB521A','#E7752D','#F29641','#F6B666','#FBD68A','#FFF4AC'],
+      positiveColorsx04: ['#308C56','#58A85A','#7FC45F','#BADA81'],
+      positiveColorsx05: ['#187B54','#429858','#6CB65D','#9FD071','#DDE797'],
+      positiveColorsx06: ['#006A51','#2C8956','#56A75A','#81C55F','#C1DD85','#FFF4AC'],
+      positiveColorsx07: ['#006A51','#248455','#489D59','#6CB65D','#96CD6B','#CBE18C','#FFF4AC'],
+      positiveColorsx08: ['#006A51','#1F8054','#3E9558','#5CAB5B','#7BC05E','#A6D374','#D3E491','#FFF4AC'],
+      positiveColorsx09: ['#006A51','#1B7D54','#369057','#51A35A','#6CB65D','#88C862','#B1D77C','#D8E694','#FFF4AC'],
+      positiveColorsx10: ['#006A51','#187B54','#308C56','#489D59','#60AD5B','#78BE5E','#96CD6B','#BADA81','#DDE797','#FFF4AC'],
+      neutralColorsx04: ['#005396','#0091A9','#5FCDA1','#FFF4AC'],
+      neutralColorsx05: ['#003F80','#006CB3','#00A5A1','#7BD4A3','#FFF4AC'],
+      neutralColorsx06: ['#003F80','#0063A8','#008FA9','#16BB9C','#98DBA5','#FFF4AC'],
+      neutralColorsx07: ['#003F80','#005DA1','#007FAF','#00A5A1','#47C79F','#AADFA6','#FFF4AC'],
+      neutralColorsx08: ['#003F80','#00589D','#0074B3','#0095A7','#00B59B','#66CFA2','#B7E2A7','#FFF4AC'],
+      neutralColorsx09: ['#003F80','#005599','#006CB3','#0089AB','#00A5A1','#29C09D','#7CD4A3','#C1E5A8','#FFF4AC'],
+      neutralColorsx10: ['#003F80','#005396','#0067AD','#007FAF','#0099A5','#00B29C','#47C79F','#8CD8A4','#C8E7A8','#FFF4AC'],
+    },
+    divergentColors: {
+      colorsx04: ['#347cbc','#89bfdc','#eea57d','#d9382d'],
+      colorsx05: ['#347cbc','#89bfdc','#ffffbf','#eea57d','#d9382d'],
+      colorsx06: ['#347cbc','#70a8cc','#bae0e1','#f6d39e','#e88666','#d9382d'],
+      colorsx07: ['#347cbc','#70a8cc','#bae0e1','#ffffbf','#f6d39e','#e88666','#d9382d'],
+      colorsx08: ['#347cbc','#5f9dcc','#89bfdc','#bae0e1','#f6d39e','#eea57d','#e47559','#d9382d'],
+      colorsx09: ['#347cbc','#5f9dcc','#89bfdc','#bae0e1','#ffffbf','#f6d39e','#eea57d','#e47559','#d9382d'],
+      colorsx10: ['#095aab','#347cbc','#5f9dcc','#89bfdc','#bae0e1','#f6d39e','#eea57d','#e47559','#d9382d','#aa1d09'],
+      colorsx11: ['#095aab','#347cbc','#5f9dcc','#89bfdc','#bae0e1','#ffffbf','#f6d39e','#eea57d','#e47559','#d9382d','#aa1d09'],
+    },
+    bivariateColors: {
+      'colors03x03': [['#e5e5e5','#7FDCF9','#0BC6FF'],['#F99FBA','#9697D3','#3690EB'],['#F4618D','#A961B3','#5C61DA']],
+      'colors04x04': [['#e5e5e5','#BAE7F6','#7FDCF9','#41D0FC'],['#F6C5D4','#BFBEDD','#88B8E5','#57B2ED'],['#F99FBA','#C89BC6','#9697D3','#6494DF'],['#F782A5','#D180B3','#9F7DC5','#727AD4']],
+      'colors05x04': [['#e5e5e5','#BAE7F6','#7FDCF9','#41D0FC'],['#F6C5D4','#BFBEDD','#88B8E5','#57B2ED'],['#F99FBA','#C89BC6','#9697D3','#6494DF'],['#F782A5','#D180B3','#9F7DC5','#727AD4'],['#F4618D','#D2619F','#A961B3','#8061C8']],
+      'colors04x05': [['#e5e5e5','#BAE7F6','#7FDCF9','#41D0FC','#0BC6FF'],['#F6C5D4','#BFBEDD','#88B8E5','#57B2ED','#21ABF5'],['#F99FBA','#C89BC6','#9697D3','#6494DF','#3690EB'],['#F782A5','#D180B3','#9F7DC5','#727AD4','#4978E3']],
+      'colors05x05': [['#e5e5e5','#BAE7F6','#7FDCF9','#41D0FC','#0BC6FF'],['#F6C5D4','#BFBEDD','#88B8E5','#57B2ED','#21ABF5'],['#F99FBA','#C89BC6','#9697D3','#6494DF','#3690EB'],['#F782A5','#D180B3','#9F7DC5','#727AD4','#4978E3'],['#F4618D','#D2619F','#A961B3','#8061C8','#5C61DA']],
+    },
+    sdgColors: {
+      'SDG 1': '#E5243B','SDG 2': '#DDA63A','SDG 3': '#4C9F38','SDG 4': '#C5192D',
+      'SDG 5': '#FF3A21','SDG 6': '#26BDE2','SDG 7': '#FCC30B','SDG 8': '#A21942',
+      'SDG 9': '#FD6925','SDG 10': '#DD1367','SDG 11': '#FD9D24','SDG 12': '#BF8B2E',
+      'SDG 13': '#3F7E44','SDG 14': '#0A97D9','SDG 15': '#56C02B','SDG 16': '#00689D','SDG 17': '#19486A',
+    },
+  }
+};
+
+// ─────────────────────────────────────────────
+//  THEME STATE
+// ─────────────────────────────────────────────
+let currentTheme = 'light';
+
+function getP() { return palette[currentTheme]; }
+
+function copyHex(hex) {
+  navigator.clipboard.writeText(hex).catch(() => {});
+  const toast = document.getElementById('toast');
+  toast.textContent = `Copied ${hex}`;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1800);
+}
+
+// ─────────────────────────────────────────────
+//  BUILDERS
+// ─────────────────────────────────────────────
+function makeSwatch(name, hex, size = 52) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'swatch';
+  wrapper.title = `${name}: ${hex}`;
+  wrapper.onclick = () => copyHex(hex);
+  wrapper.innerHTML = `
+    <div class="swatch-box" style="background:${hex};width:${size}px;height:${size}px;"></div>
+    <div class="swatch-name">${name}</div>
+    <div class="swatch-label">${hex}</div>
+  `;
+  return wrapper;
+}
+
+function makeSeqBar(key, colors) {
+  const group = document.createElement('div');
+  group.className = 'seq-group';
+  group.innerHTML = `<div class="seq-group-label">${key} (${colors.length} stops)</div>`;
+  const bar = document.createElement('div');
+  bar.className = 'swatch-sequence';
+  bar.title = colors.join(' → ');
+  bar.onclick = () => copyHex(colors.join(', '));
+  colors.forEach(c => {
+    const cell = document.createElement('div');
+    cell.className = 'seq-cell';
+    cell.style.background = c;
+    bar.appendChild(cell);
+  });
+  group.appendChild(bar);
+  return group;
+}
+
+function buildSwatchGrid(container, obj) {
+  container.innerHTML = '';
+  const grid = document.createElement('div');
+  grid.className = 'swatch-grid';
+  Object.entries(obj).forEach(([name, hex]) => {
+    grid.appendChild(makeSwatch(name, hex));
+  });
+  container.appendChild(grid);
+}
+
+function buildGraphTokens() {
+  const container = document.getElementById('graphTokens');
+  container.innerHTML = '';
+  const p = getP();
+  Object.entries(p.graphTokens).forEach(([name, hex]) => {
+    const el = document.createElement('div');
+    el.className = 'graph-token';
+    el.title = hex;
+    el.onclick = () => copyHex(hex);
+    el.innerHTML = `
+      <div class="graph-token-box" style="background:${hex};"></div>
+      <div class="graph-token-info">
+        <div class="graph-token-name">${name}</div>
+        <div class="graph-token-hex">${hex}</div>
+      </div>`;
+    container.appendChild(el);
+  });
+}
+
+function buildGrays() {
+  const container = document.getElementById('graysGrid');
+  container.innerHTML = '';
+  const p = getP();
+  Object.entries(p.grays).forEach(([name, hex]) => {
+    container.appendChild(makeSwatch(name, hex));
+  });
+}
+
+function buildPrimary() {
+  const container = document.getElementById('primaryGrid');
+  container.innerHTML = '';
+  const p = getP();
+  Object.entries(p.primaryColors).forEach(([name, hex]) => {
+    container.appendChild(makeSwatch(name, hex, 60));
+  });
+}
+
+function buildAlerts() {
+  const container = document.getElementById('alertsGrid');
+  container.innerHTML = '';
+  const p = getP();
+  Object.entries(p.alerts).forEach(([name, hex]) => {
+    container.appendChild(makeSwatch(name, hex));
+  });
+}
+
+function buildCategorical() {
+  const catGrid = document.getElementById('categoricalGrid');
+  catGrid.innerHTML = '';
+  const p = getP();
+  Object.entries(p.categoricalColors).forEach(([name, hex]) => {
+    catGrid.appendChild(makeSwatch(name, hex, 56));
+  });
+
+  const chips = document.getElementById('specialChips');
+  chips.innerHTML = '';
+  const specials = {
+    ...Object.fromEntries(Object.entries(p.genderColors).map(([k,v]) => [`Gender · ${k}`, v])),
+    ...Object.fromEntries(Object.entries(p.locationColors).map(([k,v]) => [`Location · ${k}`, v])),
+  };
+  Object.entries(specials).forEach(([name, hex]) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.onclick = () => copyHex(hex);
+    chip.innerHTML = `<div class="chip-dot" style="background:${hex};"></div><span class="chip-text">${name}</span><span class="chip-hex">${hex}</span>`;
+    chips.appendChild(chip);
+  });
+}
+
+function buildSequential() {
+  const p = getP();
+  const seqData = p.sequentialColors;
+
+  ['negSeq', 'posSeq', 'neuSeq'].forEach(id => document.getElementById(id).innerHTML = '');
+
+  const negKeys = Object.keys(seqData).filter(k => k.startsWith('negative'));
+  const posKeys = Object.keys(seqData).filter(k => k.startsWith('positive'));
+  const neuKeys = Object.keys(seqData).filter(k => k.startsWith('neutral'));
+
+  negKeys.forEach(k => document.getElementById('negSeq').appendChild(makeSeqBar(k, seqData[k])));
+  posKeys.forEach(k => document.getElementById('posSeq').appendChild(makeSeqBar(k, seqData[k])));
+  neuKeys.forEach(k => document.getElementById('neuSeq').appendChild(makeSeqBar(k, seqData[k])));
+}
+
+function buildDivergent() {
+  const container = document.getElementById('divGrid');
+  container.innerHTML = '';
+  const p = getP();
+  Object.entries(p.divergentColors).forEach(([key, colors]) => {
+    container.appendChild(makeSeqBar(key, colors));
+  });
+}
+
+function buildBivariate() {
+  const container = document.getElementById('bivGrid');
+  container.innerHTML = '';
+  const p = getP();
+  Object.entries(p.bivariateColors).forEach(([key, matrix]) => {
+    const wrap = document.createElement('div');
+    wrap.style.marginBottom = '24px';
+
+    const title = document.createElement('div');
+    title.className = 'section-title';
+    title.textContent = key;
+    wrap.appendChild(title);
+
+    const panel = document.createElement('div');
+    panel.className = 'panel';
+
+    const grid = document.createElement('div');
+    grid.className = 'bivariate-wrap';
+    grid.title = `Click to copy ${key}`;
+    grid.onclick = () => copyHex(key);
+    matrix.forEach(row => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'bivariate-row';
+      row.forEach(hex => {
+        const cell = document.createElement('div');
+        cell.className = 'bivariate-cell';
+        cell.style.background = hex;
+        cell.title = hex;
+        cell.onclick = (e) => { e.stopPropagation(); copyHex(hex); };
+        rowEl.appendChild(cell);
+      });
+      grid.appendChild(rowEl);
+    });
+    panel.appendChild(grid);
+    wrap.appendChild(panel);
+    container.appendChild(wrap);
+  });
+}
+
+function buildSDG() {
+  const container = document.getElementById('sdgGrid');
+  container.innerHTML = '';
+  const p = getP();
+  Object.entries(p.sdgColors).forEach(([name, hex]) => {
+    const el = document.createElement('div');
+    el.className = 'sdg-swatch';
+    el.style.background = hex;
+    el.title = `${name}: ${hex}`;
+    el.textContent = name.replace('SDG ', '');
+    el.onclick = () => copyHex(hex);
+    container.appendChild(el);
+  });
+}
+
+function buildAll() {
+  buildGraphTokens();
+  buildGrays();
+  buildPrimary();
+  buildAlerts();
+  buildCategorical();
+  buildSequential();
+  buildDivergent();
+  buildBivariate();
+  buildSDG();
+}
+
+// ─────────────────────────────────────────────
+//  TAB NAVIGATION
+// ─────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('page-' + tab.dataset.page).classList.add('active');
+  });
+});
+
+// ─────────────────────────────────────────────
+//  THEME TOGGLE
+// ─────────────────────────────────────────────
+document.getElementById('themeToggle').addEventListener('click', () => {
+  currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', currentTheme === 'dark' ? 'dark' : '');
+  document.getElementById('themeLabel').textContent = currentTheme === 'light' ? 'Light' : 'Dark';
+  buildAll();
+});
+
+// ─────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────
+buildAll();
+</script>
+</body>
+</html>

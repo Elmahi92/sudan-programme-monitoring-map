@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>UNDP State Map Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    --bg: #F7F7F7;
+    --surface: #FFFFFF;
+    --surface-soft: #FAFAFA;
+    --border: #EDEFF0;
+    --border-strong: #D4D6D8;
+    --text-primary: #232E3D;
+    --text-secondary: #55606E;
+    --text-muted: #A9B1B7;
+    --undp-blue: #006EB5;
+    --undp-blue-dark: #1F5A95;
+    --undp-azure: #5DD4F0;
+    --no-data: #FFFFFF;
+    --state-stroke: #394250;
+    --map-water: #F4F8FB;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: 'Proxima Nova', 'Segoe UI', Arial, sans-serif;
+    color: var(--text-primary);
+    background: var(--bg);
+  }
+
+  .dashboard {
+    width: min(1280px, calc(100vw - 32px));
+    margin: 0 auto;
+    padding: 22px 0 30px;
+  }
+
+  .masthead {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 0 0 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .brand-mark {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    background: var(--undp-blue);
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: .04em;
+  }
+
+  .eyebrow {
+    margin: 0 0 5px;
+    color: var(--undp-blue);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(22px, 3vw, 34px);
+    font-weight: 700;
+    letter-spacing: 0;
+  }
+
+  .subtitle {
+    margin: 6px 0 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .meta {
+    color: var(--text-secondary);
+    font-size: 12px;
+    text-align: right;
+    line-height: 1.6;
+    white-space: nowrap;
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.2fr) repeat(3, minmax(170px, 1fr)) minmax(150px, .72fr) auto;
+    gap: 12px;
+    align-items: end;
+    padding: 18px 0;
+  }
+
+  label {
+    display: grid;
+    gap: 7px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  select, button {
+    height: 40px;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 13px;
+  }
+
+  select {
+    width: 100%;
+    padding: 0 36px 0 11px;
+  }
+
+  .range-control {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    background: var(--surface);
+  }
+
+  input[type="range"] {
+    width: 100%;
+    accent-color: var(--undp-blue);
+  }
+
+  .range-value {
+    min-width: 40px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: right;
+  }
+
+  button {
+    padding: 0 16px;
+    cursor: pointer;
+    font-weight: 700;
+    color: #FFFFFF;
+    background: var(--undp-blue);
+    border-color: var(--undp-blue);
+    white-space: nowrap;
+  }
+
+  button:hover { background: var(--undp-blue-dark); }
+
+  .map-sheet {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 18px;
+    min-height: 720px;
+    padding: 22px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  #map {
+    width: 100%;
+    min-height: 676px;
+    background: var(--map-water);
+    border: 1px solid var(--border);
+  }
+
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 2px 0;
+  }
+
+  .legend-title, .notes-title {
+    margin: 0 0 10px;
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .legend-scale {
+    display: grid;
+    gap: 7px;
+  }
+
+  .legend-row {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 9px;
+    align-items: center;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .legend-swatch {
+    width: 26px;
+    height: 17px;
+    border: 1px solid rgba(35, 46, 61, .18);
+  }
+
+  .summary-stat {
+    display: grid;
+    gap: 5px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+
+  .summary-value {
+    color: var(--undp-blue);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .summary-label, .notes {
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .leaflet-container {
+    font-family: 'Proxima Nova', 'Segoe UI', Arial, sans-serif;
+  }
+
+  .map-tooltip {
+    border: 1px solid var(--border-strong);
+    border-radius: 4px;
+    box-shadow: none;
+    color: var(--text-primary);
+    font-size: 12px;
+  }
+
+  .map-tooltip strong {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--undp-blue);
+    font-size: 13px;
+  }
+
+  .state-label {
+    color: #232E3D;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.15;
+    text-align: center;
+    text-shadow: 0 1px 0 rgba(255,255,255,.9), 1px 0 0 rgba(255,255,255,.9), 0 -1px 0 rgba(255,255,255,.9), -1px 0 0 rgba(255,255,255,.9);
+    white-space: normal;
+    pointer-events: none;
+  }
+
+  .state-label span {
+    display: inline-block;
+    max-width: 86px;
+  }
+
+  .state-boundary-line {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .map-error {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    padding: 28px;
+    color: var(--text-secondary);
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin: 0 0 18px;
+  }
+
+  .kpi {
+    padding: 14px;
+    background: #f7fafc;
+    border: 1px solid var(--border);
+  }
+
+  .kpi-label { color: var(--text-secondary); font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+  .kpi-value { margin-top: 7px; color: var(--undp-blue); font-size: 22px; font-weight: 700; }
+  .kpi-label { white-space: nowrap; font-size: 9px; }
+  .records-panel { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .record-item { display: grid; gap: 3px; padding: 10px 0; border-bottom: 1px solid var(--border); color: var(--text-secondary); font-size: 11px; line-height: 1.4; }
+  .record-item strong { color: var(--text-primary); font-size: 12px; }
+  .record-count { margin: -5px 0 8px; color: var(--text-muted); font-size: 11px; }
+  .map-actions { display: flex; gap: 8px; }
+  .map-actions button { height: 34px; padding: 0 10px; font-size: 11px; }
+  .map-key { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .key-row { display: grid; grid-template-columns: 28px 1fr; gap: 9px; align-items: center; min-height: 27px; color: var(--text-secondary); font-size: 12px; font-style: italic; }
+  .key-star { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #101010; color: #fff; font-size: 14px; font-style: normal; }
+  .key-square { width: 20px; height: 16px; border: 1px solid #c6cbd0; background: #fff; }
+  .key-line { width: 24px; height: 0; border-top: 3px solid #5d6875; }
+  .key-line.dashed { border-top: 3px dashed #5d6875; }
+  .key-line.international { border-top-width: 2px; }
+  .key-gradient { width: 24px; height: 17px; background: linear-gradient(90deg, #d9534f 0%, #f1f4f6 50%, #006eb5 100%); }
+  .key-note { margin: 13px 0 0; color: #78818a; font-size: 11px; font-style: italic; line-height: 1.35; }
+  .national-capital-marker { display: grid; place-items: center; width: 24px !important; height: 24px !important; border: 2px solid #fff; border-radius: 50%; background: #101010; color: #fff; font-size: 15px; line-height: 1; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+  .state-name-label { color: var(--map-label-color, #39434d); font-family: var(--map-label-font, 'Proxima Nova', 'Segoe UI', Arial, sans-serif); font-size: var(--map-label-size, 10px); font-weight: 600; line-height: 1.1; text-align: center; text-shadow: 0 1px 2px rgba(255,255,255,.95), 1px 0 0 rgba(255,255,255,.95), -1px 0 0 rgba(255,255,255,.95); white-space: nowrap; pointer-events: none; }
+  .view-tabs { display: flex; gap: 8px; margin: 18px 0 14px; border-bottom: 1px solid var(--border); }
+  .view-tab { height: 36px; padding: 0 14px; color: var(--text-secondary); background: transparent; border: 0; border-bottom: 3px solid transparent; }
+  .view-tab.active { color: var(--undp-blue); border-bottom-color: var(--undp-blue); }
+  .label-style-controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; margin-bottom: 16px; padding: 12px; background: #f7fafc; border: 1px solid var(--border); }
+  .label-style-controls, .controls, .kpis, .cross-controls, .beneficiary-controls { width: auto; margin-left: 22px; margin-right: 22px; }
+  .label-style-controls label { display: grid; gap: 5px; color: var(--text-secondary); font-size: 10px; }
+  .label-style-controls select, .label-style-controls input { height: 32px; font-size: 12px; }
+  .label-style-controls input[type="color"] { width: 42px; padding: 3px; }
+  .presence-toggle { display: flex !important; align-items: center; gap: 7px; min-height: 32px; padding: 0 10px; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-secondary) !important; font-size: 11px !important; letter-spacing: 0 !important; text-transform: none !important; white-space: nowrap; }
+  .presence-toggle input { width: 15px; height: 15px; accent-color: var(--undp-blue); }
+  .cross-view[hidden] { display: none; }
+  .cross-controls { display: grid; grid-template-columns: minmax(240px, 1fr) auto; gap: 18px; align-items: end; margin-bottom: 16px; }
+  .pillar-checks { display: flex; flex-wrap: wrap; gap: 8px 14px; padding: 11px; border: 1px solid var(--border-strong); background: var(--surface); }
+  .pillar-check { display: flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+  .cross-layout { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; padding: 22px; background: var(--surface); border: 1px solid var(--border); }
+  #crossMap { min-height: 676px; background: var(--map-water); border: 1px solid var(--border); }
+  .cross-side { min-width: 0; }
+  .cross-side h2 { margin: 0 0 9px; font-size: 13px; }
+  .cross-side p { color: var(--text-secondary); font-size: 12px; line-height: 1.45; }
+  .combo-list { display: grid; gap: 8px; margin-top: 12px; }
+  .combo-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--text-secondary); font-size: 11px; }
+  .combo-row strong { color: var(--text-primary); }
+  .cross-legend { display: grid; gap: 7px; margin-top: 18px; }
+  .cross-legend-row { display: grid; grid-template-columns: 24px 1fr; gap: 8px; align-items: center; color: var(--text-secondary); font-size: 11px; }
+  .cross-legend-swatch { width: 24px; height: 16px; border: 1px solid rgba(35,46,61,.18); }
+  .cross-state-label { color: var(--map-label-color, #39434d); font-family: var(--map-label-font, 'Proxima Nova', 'Segoe UI', Arial, sans-serif); font-size: var(--map-label-size, 10px); font-weight: 600; text-align: center; text-shadow: 0 1px 2px #fff; pointer-events: none; }
+  .beneficiary-view[hidden] { display: none; }
+  .beneficiary-view-title { margin: 0 0 12px; color: var(--text-primary); font-size: 18px; font-weight: 700; }
+  .beneficiary-controls { display: grid; grid-template-columns: repeat(3, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .beneficiary-layout { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 220px; gap: 18px; min-height: 720px; padding: 22px; background: var(--surface); border: 1px solid var(--border); }
+  #beneficiaryMap { min-height: 676px; background: var(--map-water); border: 1px solid var(--border); }
+  #map.basemap-hidden, #crossMap.basemap-hidden, #beneficiaryMap.basemap-hidden { background: #fff; }
+  .beneficiary-side { display: flex; flex-direction: column; justify-content: space-between; gap: 20px; padding: 2px 0; }
+  .beneficiary-side h2 { margin: 0 0 9px; font-size: 13px; }
+  .beneficiary-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 0 0 16px; }
+  .beneficiary-kpi { padding: 10px; background: #f7fafc; border: 1px solid var(--border); }
+  .beneficiary-kpi span { display: block; color: var(--text-secondary); font-size: 10px; text-transform: uppercase; letter-spacing: .06em; }
+  .beneficiary-kpi strong { display: block; margin-top: 5px; color: var(--undp-blue); font-size: 20px; }
+  .beneficiary-note { color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+  .beneficiary-legend { display: grid; gap: 7px; margin-top: 15px; }
+  .beneficiary-legend-row { display: grid; grid-template-columns: 24px 1fr; gap: 8px; align-items: center; color: var(--text-secondary); font-size: 11px; }
+  .beneficiary-swatch { width: 24px; height: 16px; border: 1px solid rgba(35,46,61,.18); }
+  .distribution-marker { display: grid; gap: 4px; width: 112px; height: 52px; padding: 4px; background: rgba(255,255,255,.96); border: 1px solid #006eb5; box-shadow: 0 1px 3px rgba(0,0,0,.22); }
+  .distribution-state { position: relative; z-index: 5; overflow: hidden; padding: 1px 3px; color: #23364a; background: rgba(255,255,255,.98); font-size: 8px; font-weight: 700; line-height: 1; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+  .distribution-bar { display: flex; width: 100%; height: 9px; margin-top: 2px; overflow: hidden; }
+  .distribution-bar span { display: block; height: 100%; }
+  .distribution-total { color: #39434d; font-size: 8px; font-weight: 700; line-height: 1; text-align: center; }
+  .distribution-female { background: #006eb5; }
+  .distribution-male { background: #596878; }
+  .distribution-youth { background: #e39b3b; }
+  .distribution-percentages { color: #39434d; font-size: 7px; line-height: 1; text-align: center; white-space: nowrap; }
+  .ratio-scale { display: grid; gap: 4px; margin-top: 8px; }
+  .ratio-gradient { height: 17px; background: linear-gradient(90deg, #d9534f 0%, #f1f4f6 50%, #006eb5 100%); border: 1px solid rgba(35,46,61,.18); }
+  .ratio-scale-labels { display: flex; justify-content: space-between; color: var(--text-secondary); font-size: 10px; font-style: italic; }
+  .bivariate-wrap { position: relative; width: 116px; height: 92px; margin-top: 10px; color: var(--text-secondary); font-size: 9px; }
+  .bivariate-diamond { position: absolute; top: 16px; left: 35px; display: grid; grid-template-columns: repeat(3, 18px); width: 54px; height: 54px; transform: rotate(45deg); }
+  .bivariate-cell { width: 18px; height: 18px; border: 1px solid rgba(35,46,61,.14); }
+  .bivariate-high-high { position: absolute; top: 0; left: 43px; }
+  .bivariate-low-high { position: absolute; top: 37px; right: 0; }
+  .bivariate-low-low { position: absolute; bottom: 0; left: 41px; }
+  .bivariate-high-low { position: absolute; top: 37px; left: 0; line-height: 1; }
+  .beneficiary-actions { display: flex; gap: 8px; margin-top: 16px; }
+  .beneficiary-actions button { height: 34px; padding: 0 10px; font-size: 11px; }
+  .beneficiary-key { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+
+  @media (max-width: 980px) {
+    .masthead { align-items: flex-start; flex-direction: column; }
+    .meta { text-align: left; white-space: normal; }
+    .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .controls button { grid-column: span 2; }
+    .map-sheet { grid-template-columns: 1fr; }
+    .cross-layout { grid-template-columns: 1fr; }
+    .cross-controls { grid-template-columns: 1fr; }
+    .beneficiary-layout { grid-template-columns: 1fr; }
+    .beneficiary-controls { grid-template-columns: 1fr; }
+    .beneficiary-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #map { min-height: 560px; }
+    .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 620px) {
+    .dashboard { width: min(100vw - 20px, 1280px); padding-top: 14px; }
+    .controls { grid-template-columns: 1fr; }
+    .controls button { grid-column: auto; }
+    .map-sheet { padding: 12px; }
+    .label-style-controls, .controls, .kpis, .cross-controls, .beneficiary-controls { margin-left: 12px; margin-right: 12px; }
+    #map { min-height: 470px; }
+    #crossMap { min-height: 470px; }
+    #beneficiaryMap { min-height: 470px; }
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media print {
+    body { background: #FFFFFF; }
+    .dashboard { width: 100%; padding: 0; }
+    .controls { display: none; }
+    .map-sheet { min-height: 720px; border-color: #D4D6D8; break-inside: avoid; }
+    #map { min-height: 676px; }
+    button { display: none; }
+  }
+</style>
+</head>
+<body>
+  <main class="dashboard">
+    <header class="masthead">
+      <div class="brand">
+        <div class="brand-mark">UNDP</div>
+        <div>
+          <p class="eyebrow">Sudan state-level beneficiary mapping</p>
+          <h1 id="mapTitle">Direct Beneficiaries by State</h1>
+          <p class="subtitle" id="mapSubtitle">2026 Target | All Pillars | Total beneficiaries</p>
+        </div>
+      </div>
+      <div class="meta">
+        <div>Source: Master data as of Sep 2026</div>
+        <div>Administrative level: State</div>
+      </div>
+    </header>
+
+    <nav class="view-tabs" aria-label="Dashboard views">
+      <button type="button" class="view-tab active" id="recordsTab">Programme Map</button>
+      <button type="button" class="view-tab" id="crossPillarTab">Cross-Pillar by State</button>
+      <button type="button" class="view-tab" id="beneficiaryTab">Beneficiary Analysis</button>
+    </nav>
+    <section class="label-style-controls" aria-label="Map label styling">
+      <label for="labelFont">Label font
+        <select id="labelFont">
+          <option value="'Proxima Nova', 'Segoe UI', Arial, sans-serif">Proxima Nova</option>
+          <option value="'Segoe UI', Arial, sans-serif">Segoe UI</option>
+          <option value="Arial, sans-serif">Arial</option>
+          <option value="Georgia, serif">Georgia</option>
+          <option value="'Courier New', monospace">Courier New</option>
+        </select>
+      </label>
+      <label for="labelSize">Label size
+        <input id="labelSize" type="range" min="8" max="18" step="1" value="10">
+      </label>
+      <label for="labelColor">Label colour
+        <input id="labelColor" type="color" value="#39434d">
+      </label>
+      <span id="labelSizeValue" class="range-value">10px</span>
+      <label class="presence-toggle" for="showBasemap"><input id="showBasemap" type="checkbox" checked> Show basemap</label>
+    </section>
+
+    <section class="controls" aria-label="Map filters">
+      <label for="pillarSelect">Pillar
+        <select id="pillarSelect"></select>
+      </label>
+      <label for="beneficiarySelect">Beneficiary Type
+        <select id="beneficiarySelect">
+          <option value="Direct">Direct beneficiaries</option>
+          <option value="Indirect">Indirect beneficiaries</option>
+          <option value="Both">Direct + Indirect beneficiaries</option>
+        </select>
+      </label>
+      <label for="periodSelect">Reporting Period
+        <select id="periodSelect">
+          <option value="Target 2026">2026 target</option>
+          <option value="Actual Sep 2026">Actual as of September 2026</option>
+        </select>
+      </label>
+      <label for="groupSelect">Population Group
+        <select id="groupSelect">
+          <option value="Total">Total beneficiaries</option>
+          <option value="Female">Female beneficiaries</option>
+          <option value="Male">Male beneficiaries</option>
+          <option value="Youth">Youth beneficiaries</option>
+        </select>
+      </label>
+      <label for="intensityRange">Colour Intensity
+        <span class="range-control">
+          <input id="intensityRange" type="range" min="60" max="140" step="5" value="100" />
+          <span class="range-value" id="intensityValue">100%</span>
+        </span>
+      </label>
+      <label class="presence-toggle" for="presenceToggle"><input id="presenceToggle" type="checkbox"> UNDP presence only</label>
+      <label for="stateSelect">State
+        <select id="stateSelect"></select>
+      </label>
+      <label for="localitySelect">Locality
+        <select id="localitySelect"></select>
+      </label>
+      <label for="projectSelect">Project / Programme
+        <select id="projectSelect"></select>
+      </label>
+      <label for="interventionSelect">Intervention
+        <select id="interventionSelect"></select>
+      </label>
+      <button type="button" id="printButton">Print / Save</button>
+    </section>
+
+    <section class="kpis" aria-label="Selected record summary">
+      <div class="kpi"><div class="kpi-label">States</div><div class="kpi-value" id="kpiStates">0</div></div>
+      <div class="kpi"><div class="kpi-label">Localities</div><div class="kpi-value" id="kpiLocalities">0</div></div>
+      <div class="kpi"><div class="kpi-label" id="kpiPeriodLabel">Direct target</div><div class="kpi-value" id="kpiTarget">0</div></div>
+      <div class="kpi"><div class="kpi-label" id="kpiActualLabel">Actual as of Sep 2026</div><div class="kpi-value" id="kpiActual">0</div></div>
+    </section>
+
+    <section class="map-sheet" aria-label="State choropleth map">
+      <div id="map"></div>
+      <aside class="side-panel">
+        <div>
+          <p class="legend-title">Legend</p>
+          <div class="legend-scale" id="legend"></div>
+        </div>
+        <div class="map-key">
+          <p class="notes-title">Map Key</p>
+          <div class="key-row"><span class="key-star">★</span><span>National capital</span></div>
+          <div class="key-row"><span class="key-square"></span><span>State capital</span></div>
+          <div class="key-row"><span class="key-gradient"></span><span>Ratio scale</span></div>
+          <div class="key-row"><span class="key-line"></span><span>No presence</span></div>
+          <div class="key-row"><span class="key-line dashed"></span><span>State boundary</span></div>
+          <div class="key-row"><span class="key-line international"></span><span>International boundary</span></div>
+        </div>
+        <div>
+          <p class="notes-title">Map Notes</p>
+          <p class="notes" id="mapNotes">The map summarizes project records by state. Darker shades represent higher values for the selected indicator.</p>
+          <p class="key-note">Boundaries and names shown are based on the supplied GIS data and do not imply official endorsement or acceptance by the United Nations.<br><strong>Source:</strong> UNDP Sudan CO<br><strong>Date:</strong> September 2026</p>
+          <div class="map-actions">
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="cross-view" id="crossView" aria-label="Cross-pillar by state view" hidden>
+      <div class="cross-controls">
+        <label>Highlight selected pillars
+          <div class="pillar-checks" id="crossPillarChecks"></div>
+        </label>
+        <button type="button" id="clearCrossPillars">Clear selection</button>
+      </div>
+      <div class="cross-layout">
+        <div id="crossMap"></div>
+        <aside class="cross-side">
+          <h2>Cross-pillar presence</h2>
+          <p id="crossSummary">States are shaded by the number of active pillars. Select pillars to find states where all selected pillars overlap.</p>
+          <div class="cross-legend" id="crossLegend"></div>
+          <h2 style="margin-top:24px">Pillar combinations</h2>
+          <div class="combo-list" id="pillarCombinations"></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="beneficiary-view" id="beneficiaryView" aria-label="Beneficiary analysis view" hidden>
+      <div class="beneficiary-controls">
+        <label for="beneficiaryIndicator">Indicator
+          <select id="beneficiaryIndicator">
+            <option value="distribution">Beneficiaries Distribution (Female, Male and Youth)</option>
+            <option value="bivariate">Bivariate: Target vs Actual Reach</option>
+            <option value="total">Total beneficiaries</option>
+            <option value="female">Female beneficiaries</option>
+            <option value="male">Male beneficiaries</option>
+            <option value="youth">Youth beneficiaries</option>
+            <option value="femaleShare">Female share</option>
+            <option value="maleShare">Male share</option>
+            <option value="youthShare">Youth share</option>
+            <option value="genderBalance">Gender balance</option>
+            <option value="reachRatio">Ratio of Beneficiary Reach Against Targets</option>
+          </select>
+        </label>
+        <label for="beneficiaryType">Beneficiary type
+          <select id="beneficiaryType"><option value="Direct">Direct beneficiaries</option><option value="Indirect">Indirect beneficiaries</option><option value="Both">Direct + Indirect beneficiaries</option></select>
+        </label>
+        <label for="beneficiaryPeriod">Reporting period
+          <select id="beneficiaryPeriod"><option value="Target 2026">2026 target</option><option value="Actual Sep 2026">Actual as of September 2026</option></select>
+        </label>
+      </div>
+      <div class="beneficiary-kpis">
+        <div class="beneficiary-kpi"><span id="beneficiaryPrimaryLabel">Total</span><strong id="beneficiaryTotal">0</strong></div>
+        <div class="beneficiary-kpi"><span>Female share</span><strong id="beneficiaryFemaleShare">0%</strong></div>
+        <div class="beneficiary-kpi"><span>Male share</span><strong id="beneficiaryMaleShare">0%</strong></div>
+        <div class="beneficiary-kpi"><span>Youth share</span><strong id="beneficiaryYouthShare">0%</strong></div>
+        <div class="beneficiary-kpi"><span>Areas reached</span><strong id="beneficiaryAreas">0</strong></div>
+      </div>
+      <div class="beneficiary-layout">
+        <div id="beneficiaryMap"></div>
+        <aside class="beneficiary-side">
+          <h2 class="beneficiary-view-title" id="beneficiaryTitle">Total beneficiaries</h2>
+          <div class="beneficiary-legend" id="beneficiaryLegend"></div>
+          <div class="map-key">
+            <p class="notes-title">Map Key</p>
+            <div class="key-row"><span class="key-star">★</span><span>National capital</span></div>
+            <div class="key-row"><span class="key-square"></span><span>State capital</span></div>
+            <div class="key-row"><span class="key-gradient"></span><span>Ratio scale</span></div>
+            <div class="key-row"><span class="key-line"></span><span>No presence</span></div>
+            <div class="key-row"><span class="key-line dashed"></span><span>State boundary</span></div>
+            <div class="key-row"><span class="key-line international"></span><span>International boundary</span></div>
+          </div>
+          <div class="beneficiary-actions">
+          </div>
+          <div class="beneficiary-key">
+            <p class="notes-title">Map Notes</p>
+            <p class="beneficiary-note">Counts use proportional circles. Share and balance indicators use state colors. White dotted lines mark state boundaries.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- The original prototype is retained below for reference; the dashboard uses dashboard.js. -->
+<script type="text/plain">
+const DATA_PATH = '../Geo_Data/M_E_masterdata_by_state.geojson';
+const BASEMAP_PATH = '../Geo_Data/sdn_admbnda_adm1_cbs_nic_ssa_download.geojson';
+const COLOR_SCALE = ['#EAF4FF', '#B5D5F5', '#94C4F5', '#6BABEB', '#3288CE', '#006EB5', '#1F5A95'];
+const NO_DATA_COLOR = '#F8FAFC';
+const numberFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+const STATE_ALIASES = {
+  'Gedarif': 'Gedaref',
+  'Kartoum': 'Khartoum'
+};
+
+const controls = {
+  pillar: document.getElementById('pillarSelect'),
+  beneficiary: document.getElementById('beneficiarySelect'),
+  period: document.getElementById('periodSelect'),
+  group: document.getElementById('groupSelect'),
+  intensity: document.getElementById('intensityRange')
+};
+
+let rawFeatures = [];
+let stateFeatures = [];
+let baseLayer;
+let boundaryLayer;
+let stateLayer;
+let labelLayer;
+let map;
+
+function metricColumn() {
+  return `${controls.beneficiary.value} ${controls.period.value} ${controls.group.value}`;
+}
+
+function reportingPeriodLabel() {
+  return controls.period.value === 'Target 2026' ? '2026 Target' : 'Actual as of September 2026';
+}
+
+function selectedPillarLabel() {
+  return controls.pillar.value === '__all__' ? 'All Pillars' : controls.pillar.value;
+}
+
+function metricTitle() {
+  const beneficiary = controls.beneficiary.value;
+  const period = controls.period.value === 'Target 2026' ? 'Targeted' : 'Reached';
+  return `${beneficiary} Beneficiaries ${period} by State`;
+}
+
+function cleanNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function normalizeStateName(state) {
+  const cleanState = String(state || '').trim();
+  return STATE_ALIASES[cleanState] || cleanState;
+}
+
+function stateParts(state) {
+  return String(state || '')
+    .split('/')
+    .map(part => normalizeStateName(part))
+    .filter(Boolean);
+}
+
+function buildStateFeatures(features) {
+  const byState = new Map();
+  features.forEach(feature => {
+    const rawState = feature.properties.State;
+    if (!rawState || String(rawState).includes('/') || !feature.geometry) return;
+    const state = normalizeStateName(rawState);
+    if (byState.has(state)) return;
+    byState.set(state, {
+      type: 'Feature',
+      properties: { State: state, value: null, records: 0 },
+      geometry: feature.geometry
+    });
+  });
+  return Array.from(byState.values()).sort((a, b) => a.properties.State.localeCompare(b.properties.State));
+}
+
+function populatePillars() {
+  const pillars = Array.from(new Set(rawFeatures.map(feature => feature.properties.Piller).filter(Boolean))).sort();
+  controls.pillar.innerHTML = '<option value="__all__">All Pillars</option>' + pillars.map(pillar => `<option value="${escapeHtml(pillar)}">${escapeHtml(pillar)}</option>`).join('');
+}
+
+function aggregateValues() {
+  const column = metricColumn();
+  const selectedPillar = controls.pillar.value;
+  const totals = new Map();
+  const recordCounts = new Map();
+
+  rawFeatures.forEach(feature => {
+    const properties = feature.properties;
+    const states = stateParts(properties.State);
+    if (!states.length) return;
+    if (selectedPillar !== '__all__' && properties.Piller !== selectedPillar) return;
+    const value = cleanNumber(properties[column]);
+    if (value === null) return;
+    const splitValue = value / states.length;
+    states.forEach(state => {
+      totals.set(state, (totals.get(state) || 0) + splitValue);
+      recordCounts.set(state, (recordCounts.get(state) || 0) + 1);
+    });
+  });
+
+  stateFeatures.forEach(feature => {
+    const state = feature.properties.State;
+    feature.properties.value = totals.has(state) ? totals.get(state) : null;
+    feature.properties.records = recordCounts.get(state) || 0;
+  });
+}
+
+function createBreaks(values) {
+  const positiveValues = values.filter(value => value !== null && value > 0).sort((a, b) => a - b);
+  if (!positiveValues.length) return [];
+  const max = positiveValues[positiveValues.length - 1];
+  if (max === 0) return [0];
+  const breaks = [];
+  const classes = COLOR_SCALE.length;
+  for (let index = 1; index <= classes; index++) {
+    breaks.push(max * index / classes);
+  }
+  return breaks;
+}
+
+function hexToRgb(hex) {
+  const normalized = hex.replace('#', '');
+  return {
+    r: parseInt(normalized.slice(0, 2), 16),
+    g: parseInt(normalized.slice(2, 4), 16),
+    b: parseInt(normalized.slice(4, 6), 16)
+  };
+}
+
+function rgbToHex({ r, g, b }) {
+  return '#' + [r, g, b].map(value => Math.round(value).toString(16).padStart(2, '0')).join('');
+}
+
+function mixColors(color, target, amount) {
+  const sourceRgb = hexToRgb(color);
+  const targetRgb = hexToRgb(target);
+  return rgbToHex({
+    r: sourceRgb.r + (targetRgb.r - sourceRgb.r) * amount,
+    g: sourceRgb.g + (targetRgb.g - sourceRgb.g) * amount,
+    b: sourceRgb.b + (targetRgb.b - sourceRgb.b) * amount
+  });
+}
+
+function adjustedColorScale() {
+  const intensity = Number(controls.intensity.value) / 100;
+  document.getElementById('intensityValue').textContent = `${Math.round(intensity * 100)}%`;
+  if (intensity === 1) return COLOR_SCALE;
+  const target = intensity < 1 ? '#FFFFFF' : '#003F80';
+  const amount = intensity < 1 ? 1 - intensity : Math.min((intensity - 1) * 0.75, 0.3);
+  return COLOR_SCALE.map(color => mixColors(color, target, amount));
+}
+
+function colorForValue(value, breaks, colorScale) {
+  if (value === null) return NO_DATA_COLOR;
+  if (value <= 0) return colorScale[0];
+  const index = breaks.findIndex(limit => value <= limit);
+  return colorScale[index === -1 ? colorScale.length - 1 : index];
+}
+
+function styleFeature(feature, breaks, colorScale) {
+  return {
+    color: '#2F3B4A',
+    weight: 1.35,
+    opacity: 0.95,
+    fillColor: colorForValue(feature.properties.value, breaks, colorScale),
+    fillOpacity: feature.properties.value === null ? 0.78 : 0.86
+  };
+}
+
+function tooltipHtml(feature) {
+  const value = feature.properties.value;
+  return `<strong>${escapeHtml(feature.properties.State)}</strong>
+    <div>${escapeHtml(metricTitle())}</div>
+    <div>Value: ${value === null ? 'No data' : numberFormat.format(value)}</div>
+    <div>Period: ${escapeHtml(reportingPeriodLabel())}</div>`;
+}
+
+function renderLegend(breaks, colorScale) {
+  const legend = document.getElementById('legend');
+  if (!breaks.length) {
+    legend.innerHTML = '<div class="legend-row"><span class="legend-swatch" style="background:#FFFFFF"></span><span>No data for this selection</span></div>';
+    return;
+  }
+
+  const rows = breaks.map((limit, index) => {
+    const previous = index === 0 ? 0 : breaks[index - 1];
+    const label = index === 0
+      ? `0 - ${numberFormat.format(limit)}`
+      : `${numberFormat.format(previous + 1)} - ${numberFormat.format(limit)}`;
+    return `<div class="legend-row"><span class="legend-swatch" style="background:${colorScale[index]}"></span><span>${label}</span></div>`;
+  });
+  rows.push('<div class="legend-row"><span class="legend-swatch" style="background:#FFFFFF"></span><span>No data</span></div>');
+  legend.innerHTML = rows.join('');
+}
+
+function updateTitles() {
+  document.getElementById('mapTitle').textContent = metricTitle();
+  document.getElementById('mapSubtitle').textContent = `${reportingPeriodLabel()} | ${selectedPillarLabel()} | ${controls.group.options[controls.group.selectedIndex].text}`;
+}
+
+function updateSummary(values) {
+  const total = values.reduce((sum, value) => sum + (value || 0), 0);
+  document.getElementById('totalValue').textContent = numberFormat.format(total);
+  document.getElementById('totalLabel').textContent = `${controls.group.options[controls.group.selectedIndex].text} across mapped states`;
+}
+
+function renderBaseMap(geojson) {
+  if (baseLayer) baseLayer.remove();
+  if (boundaryLayer) boundaryLayer.remove();
+  baseLayer = L.geoJSON(geojson, {
+    interactive: false,
+    style: {
+      color: '#7C8794',
+      weight: 1.2,
+      opacity: 0.9,
+      fillColor: '#EEF2F5',
+      fillOpacity: 0.65
+    }
+  }).addTo(map);
+
+  boundaryLayer = L.geoJSON(geojson, {
+    interactive: false,
+    style: {
+      color: '#2F3B4A',
+      weight: 1.8,
+      opacity: 0.95,
+      fill: false,
+      className: 'state-boundary-line'
+    }
+  });
+}
+
+function renderMap() {
+  aggregateValues();
+  updateTitles();
+
+  const values = stateFeatures.map(feature => feature.properties.value);
+  const breaks = createBreaks(values);
+  const colorScale = adjustedColorScale();
+  renderLegend(breaks, colorScale);
+  updateSummary(values);
+
+  if (stateLayer) stateLayer.remove();
+  if (labelLayer) labelLayer.remove();
+  stateLayer = L.geoJSON(stateFeatures, {
+    style: feature => styleFeature(feature, breaks, colorScale),
+    onEachFeature: (feature, layer) => {
+      layer.bindTooltip(tooltipHtml(feature), { sticky: true, className: 'map-tooltip' });
+      layer.on({
+        mouseover: event => event.target.setStyle({ weight: 2.2, color: '#006EB5' }),
+        mouseout: event => stateLayer.resetStyle(event.target)
+      });
+    }
+  }).addTo(map);
+
+  if (boundaryLayer) boundaryLayer.addTo(map).bringToFront();
+
+  labelLayer = L.layerGroup(stateFeatures.map(feature => {
+    const center = L.geoJSON(feature).getBounds().getCenter();
+    const icon = L.divIcon({
+      className: 'state-label',
+      html: `<span>${escapeHtml(feature.properties.State)}</span>`,
+      iconSize: [92, 28],
+      iconAnchor: [46, 14]
+    });
+    return L.marker(center, { icon, interactive: false, keyboard: false, pane: 'stateLabels' });
+  })).addTo(map);
+
+  map.fitBounds(stateLayer.getBounds(), { padding: [18, 18] });
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>'"]/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  }[character]));
+}
+
+function showError(message) {
+  document.getElementById('map').innerHTML = `<div class="map-error">${escapeHtml(message)}</div>`;
+}
+
+async function init() {
+  map = L.map('map', {
+    zoomSnap: 0.1,
+    zoomDelta: 0.5,
+    zoomControl: false,
+    scrollWheelZoom: false,
+    doubleClickZoom: false,
+    boxZoom: false,
+    keyboard: true,
+    dragging: true,
+    attributionControl: false
+  });
+  L.control.zoom({ position: 'bottomleft' }).addTo(map);
+  map.createPane('stateLabels');
+  map.getPane('stateLabels').style.zIndex = 650;
+  map.getPane('stateLabels').style.pointerEvents = 'none';
+
+  try {
+    const [response, basemapResponse] = await Promise.all([
+      fetch(DATA_PATH),
+      fetch(BASEMAP_PATH)
+    ]);
+    if (!response.ok) throw new Error(`Unable to load ${DATA_PATH}`);
+    if (!basemapResponse.ok) throw new Error(`Unable to load ${BASEMAP_PATH}`);
+    const [geojson, basemapGeojson] = await Promise.all([
+      response.json(),
+      basemapResponse.json()
+    ]);
+    rawFeatures = geojson.features || [];
+    stateFeatures = buildStateFeatures(rawFeatures);
+    renderBaseMap(basemapGeojson);
+    populatePillars();
+    Object.values(controls).forEach(control => control.addEventListener('change', renderMap));
+    controls.intensity.addEventListener('input', renderMap);
+    document.getElementById('printButton').addEventListener('click', () => window.print());
+    renderMap();
+  } catch (error) {
+    showError('The dashboard could not load the GeoJSON data. Open it through a local web server from the project root.');
+    console.error(error);
+  }
+}
+
+init();
+</script>
+<script src="dashboard.js"></script>
+</body>
+</html>

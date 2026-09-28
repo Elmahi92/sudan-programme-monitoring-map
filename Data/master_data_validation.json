@@ -1,0 +1,46 @@
+{
+  "source_workbook": "Data\\Master_data_as_sep26.xlsx",
+  "source_sheet": "Sheet1",
+  "source_records": 313,
+  "output_features": 313,
+  "source_headers": [
+    "Piller",
+    "Project Name",
+    "Intervention",
+    "State",
+    "Location",
+    "Direct Target 2026 Female",
+    "Direct Target 2026 Male",
+    "Direct Target 2026 Youth",
+    "Direct Target 2026 Total",
+    "Direct Actual Sep 2026 Female",
+    "Direct Actual Sep 2026 Male",
+    "Direct Actual Sep 2026 Youth",
+    "Direct Actual Sep 2026 Total",
+    "Indirect Target 2026 Female",
+    "Indirect Target 2026 Male",
+    "Indirect Target 2026 Youth",
+    "Indirect Target 2026 Total",
+    "Indirect Actual Sep 2026 Female",
+    "Indirect Actual Sep 2026 Male",
+    "Indirect Actual Sep 2026 Youth",
+    "Indirect Actual Sep 2026 Total"
+  ],
+  "legacy_geometry_matches": 305,
+  "boundary_geometry_fallbacks": 2,
+  "null_geometry_records": 6,
+  "null_geometry_row_numbers": [
+    42,
+    246,
+    247,
+    248,
+    249,
+    250
+  ],
+  "unmatched_or_null_states": {
+    "state": 1,
+    "<NULL>": 5
+  },
+  "duplicate_source_records": 6,
+  "note": "Rows are preserved one-for-one; duplicate records are not aggregated."
+}
